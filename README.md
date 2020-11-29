@@ -3,7 +3,7 @@ Example of XML parser with ESP-IDF.
 
 ESP-IDF includes [this](https://libexpat.github.io/) XML parser library (Version: 2.2.5).   
 You can use XML parser as standard.   
-But there is no example code in esp-idf package.   
+But there is no example code in esp-idf repository.   
 
 # Installation
 ```
