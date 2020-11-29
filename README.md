@@ -32,7 +32,7 @@ openssl s_client -showcerts -connect weather-broker-cdn.api.bbci.co.uk:443 </dev
 #openssl s_client -showcerts -connect www.espn.com:443 </dev/null >hoge
 ```
 
-- Execute getpem.sh
+- Run getpem.sh to get the public key.
 ```
 $ ./getpem.sh
 depth=2 OU = GlobalSign Root CA - R3, O = GlobalSign, CN = GlobalSign
