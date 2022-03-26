@@ -10,7 +10,7 @@ But there is no example code in esp-idf repository.
 git clone https://github.com/nopnop2002/esp-idf-xml
 cd esp-idf-xml
 ./getpem.sh
-make flash monitor
+idf.py flash monitor
 ```
 
 # Configuration
