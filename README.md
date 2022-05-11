@@ -1,15 +1,17 @@
 # esp-idf-xml
-Example of XML parser with ESP-IDF.
+Example of XML parser with ESP-IDF.   
 
-ESP-IDF includes [this](https://libexpat.github.io/) XML parser library (Version: 2.2.5).   
-You can use XML parser as standard.   
+The XML Parsing C Library can be used with ESP-IDF.   
+This Libary is registered [here](https://components.espressif.com/component/espressif/expat) as a component.   
 But there is no example code in esp-idf repository.   
 
 # Installation
 ```
 git clone https://github.com/nopnop2002/esp-idf-xml
 cd esp-idf-xml
+idf.py add-dependency espressif/expat==2.4.3
 ./getpem.sh
+idf.py menuconfig
 idf.py flash monitor
 ```
 
@@ -23,8 +25,32 @@ PASSWORD of your wifi.
 Maximum number of retries when connecting to wifi.
 
 ![config-main](https://user-images.githubusercontent.com/6020549/100534161-2fc24c80-324f-11eb-9aa1-5db665283741.jpg)
-
 ![config-app](https://user-images.githubusercontent.com/6020549/100534164-32bd3d00-324f-11eb-98f0-9218125ad7c4.jpg)
+
+# XML source
+XML source for this projec is BBC Weather Forecast for London.   
+https://weather-broker-cdn.api.bbci.co.uk/en/forecast/rss/3day/2643743
+
+
+# Console output
+```
+I (8029) HTTP: tag=[rss/channel/title]
+I (8029) HTTP: element=[BBC Weather - Forecast for  London, GB]
+I (8039) HTTP: tag=[rss/channel/link]
+I (8039) HTTP: element=[https://www.bbc.co.uk/weather/2643743]
+I (8049) HTTP: tag=[rss/channel/description]
+I (8049) HTTP: element=[3-day forecast for London from BBC Weather, including weather, temperature and wind information]
+I (8069) HTTP: tag=[rss/channel/language]
+I (8069) HTTP: element=[en]
+I (8069) HTTP: tag=[rss/channel/copyright]
+I (8079) HTTP: element=[Copyright: (C) British Broadcasting Corporation, see https://www.bbc.co.uk/usingthebbc/terms-of-use/usingthebbc/terms-of-use/#d7c3c6fd18ea551b9f3f26ecbd4612be for more details]
+I (8099) HTTP: tag=[rss/channel/pubDate]
+I (8099) HTTP: element=[Wed, 11 May 2022 05:22:20 GMT]
+I (8109) HTTP: tag=[rss/channel/dc:date]
+I (8109) HTTP: element=[2022-05-11T05:22:20Z]
+I (8119) HTTP: tag=[rss/channel/dc:language]
+I (8119) HTTP: element=[en]
+```
 
 # How to change XML source
 - Edit getpem.sh and set the URL.
@@ -73,8 +99,10 @@ kluEfSufFT90y1HonoMOFm8b50bOI7355KKL0jlrqnkckSziYSQtjipIcJDEHsXo
 
 - Edit main/http_client.c and set the URL.
 ```
-    strcpy(url, "https://weather-broker-cdn.api.bbci.co.uk/en/forecast/rss/3day/2643743");
-    //strcpy(url, "https://www.espn.com/espn/rss/news");
+strcpy(url, "https://weather-broker-cdn.api.bbci.co.uk/en/forecast/rss/3day/2643743");
+//strcpy(url, "https://www.espn.com/espn/rss/news");
 ```
 
 - Build firmware
+
+

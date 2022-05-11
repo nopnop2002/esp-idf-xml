@@ -13,22 +13,17 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-/* The examples use WiFi configuration that you can set via project configuration menu
-
-	 If you'd rather not, just change the below entries to strings with
-	 the config you want - ie #define ESP_WIFI_SSID "mywifissid"
-*/
-#define ESP_WIFI_SSID			CONFIG_ESP_WIFI_SSID
-#define ESP_WIFI_PASS			CONFIG_ESP_WIFI_PASSWORD
-#define ESP_MAXIMUM_RETRY		CONFIG_ESP_MAXIMUM_RETRY
+#include "lwip/err.h"
+#include "lwip/sys.h"
 
 /* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t wifi_event_group;
+static EventGroupHandle_t s_wifi_event_group;
 
-/* The event group allows multiple bits for each event, but we only care about one event */
-/* - Are we connected to the AP with an IP? */
-const int WIFI_CONNECTED_BIT = BIT0;
-
+/* The event group allows multiple bits for each event, but we only care about two events:
+ * - we are connected to the AP with an IP
+ * - we failed to connect after the maximum amount of retries */
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT BIT1
 
 static const char *TAG = "MAIN";
 
@@ -43,25 +38,25 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 	if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
 		esp_wifi_connect();
 	} else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-		if (s_retry_num < ESP_MAXIMUM_RETRY) {
+		if (s_retry_num < CONFIG_ESP_MAXIMUM_RETRY) {
 			esp_wifi_connect();
-			xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
 			s_retry_num++;
 			ESP_LOGI(TAG, "retry to connect to the AP");
+		} else {
+			xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
 		}
-		ESP_LOGE(TAG,"connect to the AP fail");
+		ESP_LOGI(TAG,"connect to the AP fail");
 	} else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
 		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
 		ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-		//ESP_LOGI(TAG, "got ip:%s", ip4addr_ntoa(&event->ip_info.ip));
 		s_retry_num = 0;
-		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+		xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
 	}
 }
 
 void wifi_init_sta()
 {
-	wifi_event_group = xEventGroupCreate();
+	s_wifi_event_group = xEventGroupCreate();
 
 	ESP_ERROR_CHECK(esp_netif_init());
 	
@@ -71,22 +66,58 @@ void wifi_init_sta()
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-	ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-	ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+	esp_event_handler_instance_t instance_any_id;
+	esp_event_handler_instance_t instance_got_ip;
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+									ESP_EVENT_ANY_ID,
+									&event_handler,
+									NULL,
+									&instance_any_id));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+									IP_EVENT_STA_GOT_IP,
+									&event_handler,
+									NULL,
+									&instance_got_ip));
 
 	wifi_config_t wifi_config = {
 		.sta = {
-			.ssid = ESP_WIFI_SSID,
-			.password = ESP_WIFI_PASS
+			.ssid = CONFIG_ESP_WIFI_SSID,
+			.password = CONFIG_ESP_WIFI_PASSWORD,
+			/* Setting a password implies station will connect to all security modes including WEP/WPA.
+			 * However these modes are deprecated and not advisable to be used. Incase your Access point
+			 * doesn't support WPA2, these mode can be enabled by commenting below line */
+			.threshold.authmode = WIFI_AUTH_WPA2_PSK,
+
+			.pmf_cfg = {
+				.capable = true,
+				.required = false
+			},
 		},
 	};
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
 	ESP_ERROR_CHECK(esp_wifi_start() );
 
-	xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 	ESP_LOGI(TAG, "wifi_init_sta finished.");
-	ESP_LOGI(TAG, "connect to ap SSID:%s", ESP_WIFI_SSID);
+
+	/* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+	 * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
+	EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+		WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+		pdFALSE,
+		pdFALSE,
+		portMAX_DELAY);
+
+	/* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
+	 * happened. */
+	if (bits & WIFI_CONNECTED_BIT) {
+		ESP_LOGI(TAG, "connected to ap SSID:%s password:%s", CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
+	} else if (bits & WIFI_FAIL_BIT) {
+		ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s", CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
+	} else {
+		ESP_LOGE(TAG, "UNEXPECTED EVENT");
+	}
+
 }
 
 
@@ -95,7 +126,7 @@ int KEYBOARD_ENTER_BIT = BIT2;
 
 void keyin_task(void *pvParameters)
 {
-	//ESP_LOGI(pcTaskGetTaskName(0), "Start");
+	//ESP_LOGI(pcTaskGetName(0), "Start");
 	uint16_t c;
 	while (1) {
 		c = fgetc(stdin);
@@ -103,9 +134,9 @@ void keyin_task(void *pvParameters)
 			vTaskDelay(10);
 			continue;
 		}
-		//ESP_LOGI(pcTaskGetTaskName(0), "c=%x", c);
+		//ESP_LOGI(pcTaskGetName(0), "c=%x", c);
 		if (c == 0x0a) {
-			ESP_LOGD(pcTaskGetTaskName(0), "Push Enter");
+			ESP_LOGD(pcTaskGetName(0), "Push Enter");
 			xEventGroupSetBits(xEventGroup, KEYBOARD_ENTER_BIT);
 		}
 	}

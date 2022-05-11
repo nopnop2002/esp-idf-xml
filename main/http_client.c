@@ -21,8 +21,6 @@
 #include "esp_tls.h" 
 #include "cJSON.h"
 
-
-
 static const char *TAG = "HTTP";
 
 //EventGroupHandle_t xEventGroup;
@@ -35,8 +33,8 @@ extern const char weather_yahoo_cert_pem_start[] asm("_binary_cert_pem_start");
 extern const char weather_yahoo_cert_pem_end[]	asm("_binary_cert_pem_end");
 
 typedef struct {
-	int		depth;						// XML depth
-	char	tag[64];					// XML tag
+	int		depth; // XML depth
+	char	tag[64]; // XML tag
 } user_data_t;
 
 
@@ -60,7 +58,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 		case HTTP_EVENT_ON_DATA:
 			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
 			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, output_len=%d", output_len);
-			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, content_length=%d", esp_http_client_get_content_length(evt->client));
+			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, content_length=%lld", esp_http_client_get_content_length(evt->client));
 			// If user_data buffer is configured, copy the response into the buffer
 			if (evt->user_data) {
 				memcpy(evt->user_data + output_len, evt->data, evt->data_len);
@@ -101,6 +99,9 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 				ESP_LOGE(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
 			}
 			break;
+		case HTTP_EVENT_REDIRECT:
+			ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
+			break;
 	}
 	return ESP_OK;
 }
@@ -114,7 +115,7 @@ size_t http_client_content_length(char * url)
 	esp_http_client_config_t config = {
 		.url = url,
 		.event_handler = _http_event_handler,
-		//.user_data = local_response_buffer,		   // Pass address of local buffer to get response
+		//.user_data = local_response_buffer, // Pass address of local buffer to get response
 		.cert_pem = weather_yahoo_cert_pem_start,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -122,7 +123,7 @@ size_t http_client_content_length(char * url)
 	// GET
 	esp_err_t err = esp_http_client_perform(client);
 	if (err == ESP_OK) {
-		ESP_LOGD(TAG, "HTTP GET Status = %d, content_length = %d",
+		ESP_LOGD(TAG, "HTTP GET Status = %d, content_length = %lld",
 				esp_http_client_get_status_code(client),
 				esp_http_client_get_content_length(client));
 		content_length = esp_http_client_get_content_length(client);
@@ -142,7 +143,7 @@ esp_err_t http_client_content_get(char * url, char * response_buffer)
 	esp_http_client_config_t config = {
 		.url = url,
 		.event_handler = _http_event_handler,
-		.user_data = response_buffer,		   // Pass address of local buffer to get response
+		.user_data = response_buffer, // Pass address of local buffer to get response
 		.cert_pem = weather_yahoo_cert_pem_start,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -150,7 +151,7 @@ esp_err_t http_client_content_get(char * url, char * response_buffer)
 	// GET
 	esp_err_t err = esp_http_client_perform(client);
 	if (err == ESP_OK) {
-		ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
+		ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %lld",
 				esp_http_client_get_status_code(client),
 				esp_http_client_get_content_length(client));
 		ESP_LOGD(TAG, "\n%s", response_buffer);
