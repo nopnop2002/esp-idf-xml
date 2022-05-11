@@ -58,7 +58,11 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 		case HTTP_EVENT_ON_DATA:
 			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
 			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, output_len=%d", output_len);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, content_length=%lld", esp_http_client_get_content_length(evt->client));
+#else
+			ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, content_length=%d", esp_http_client_get_content_length(evt->client));
+#endif
 			// If user_data buffer is configured, copy the response into the buffer
 			if (evt->user_data) {
 				memcpy(evt->user_data + output_len, evt->data, evt->data_len);
@@ -99,9 +103,11 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 				ESP_LOGE(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
 			}
 			break;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 		case HTTP_EVENT_REDIRECT:
 			ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
 			break;
+#endif
 	}
 	return ESP_OK;
 }
@@ -123,7 +129,11 @@ size_t http_client_content_length(char * url)
 	// GET
 	esp_err_t err = esp_http_client_perform(client);
 	if (err == ESP_OK) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 		ESP_LOGD(TAG, "HTTP GET Status = %d, content_length = %lld",
+#else
+		ESP_LOGD(TAG, "HTTP GET Status = %d, content_length = %d",
+#endif
 				esp_http_client_get_status_code(client),
 				esp_http_client_get_content_length(client));
 		content_length = esp_http_client_get_content_length(client);
@@ -151,7 +161,11 @@ esp_err_t http_client_content_get(char * url, char * response_buffer)
 	// GET
 	esp_err_t err = esp_http_client_perform(client);
 	if (err == ESP_OK) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 		ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %lld",
+#else
+		ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
+#endif
 				esp_http_client_get_status_code(client),
 				esp_http_client_get_content_length(client));
 		ESP_LOGD(TAG, "\n%s", response_buffer);
