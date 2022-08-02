@@ -9,7 +9,7 @@ But there is no example code in esp-idf repository.
 ```
 git clone https://github.com/nopnop2002/esp-idf-xml
 cd esp-idf-xml
-idf.py add-dependency espressif/expat==2.4.3 // Only ESP-IDF V5 required
+idf.py add-dependency espressif/expat==2.4.3 // Required for ESP-IDF V5d
 chmod 777 ./getpem.sh
 ./getpem.sh
 idf.py menuconfig
