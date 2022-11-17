@@ -5,6 +5,9 @@ The XML Parsing C Library can be used with ESP-IDF.
 This Libary is registered [here](https://components.espressif.com/component/espressif/expat) as a component.   
 But there is no example code in esp-idf repository.   
 
+# Software requirements
+esp-idf v4.4/v5.0.   
+
 # Installation
 ```
 git clone https://github.com/nopnop2002/esp-idf-xml
