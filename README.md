@@ -6,7 +6,7 @@ However, unfortunately there is no sample code for ESP-IDF.
 This is example XML parser using Expat.   
 
 # Software requirements
-esp-idf v4.4/v5.0.   
+esp-idf v4.4/v5.x.   
 
 # Installation
 ```
