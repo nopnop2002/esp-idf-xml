@@ -1,9 +1,9 @@
 # esp-idf-xml
-Example of XML parser with ESP-IDF.   
+IDF component registry includes Expat XML Parsing C Library.   
+https://components.espressif.com/components/espressif/expat   
 
-The XML Parsing C Library can be used with ESP-IDF.   
-This Libary is registered [here](https://components.espressif.com/component/espressif/expat) as a component.   
-But there is no example code in esp-idf repository.   
+However, unfortunately there is no sample code for ESP-IDF.   
+This is example XML parser using Expat.   
 
 # Software requirements
 esp-idf v4.4/v5.0.   
