@@ -274,8 +274,5 @@ void http_client(void *pvParameters)
 
 	free(response_buffer);
 	ESP_LOGI(TAG, "ExpatVersion:%s", XML_ExpatVersion());
-
-	while(1) {
-		vTaskDelay(1);
-	}
+	vTaskDelete(NULL);
 }
