@@ -1,7 +1,12 @@
-/* The example of ESP-IDF
- *
- * This sample code is in the public domain.
- */
+/*	XML Client Example
+
+	This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+	Unless required by applicable law or agreed to in writing, this
+	software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+*/
+
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
@@ -12,9 +17,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
-#include "lwip/err.h"
-#include "lwip/sys.h"
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
@@ -28,9 +30,6 @@ static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "MAIN";
 
 static int s_retry_num = 0;
-
-EventGroupHandle_t xEventGroup;
-
 
 static void event_handler(void* arg, esp_event_base_t event_base,
 								int32_t event_id, void* event_data)
@@ -54,12 +53,11 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 	}
 }
 
-void wifi_init_sta()
+esp_err_t wifi_init_sta()
 {
 	s_wifi_event_group = xEventGroupCreate();
 
 	ESP_ERROR_CHECK(esp_netif_init());
-	
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
 	esp_netif_create_default_wifi_sta();
 
@@ -69,15 +67,15 @@ void wifi_init_sta()
 	esp_event_handler_instance_t instance_any_id;
 	esp_event_handler_instance_t instance_got_ip;
 	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-									ESP_EVENT_ANY_ID,
-									&event_handler,
-									NULL,
-									&instance_any_id));
+		ESP_EVENT_ANY_ID,
+		&event_handler,
+		NULL,
+		&instance_any_id));
 	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-									IP_EVENT_STA_GOT_IP,
-									&event_handler,
-									NULL,
-									&instance_got_ip));
+		IP_EVENT_STA_GOT_IP,
+		&event_handler,
+		NULL,
+		&instance_got_ip));
 
 	wifi_config_t wifi_config = {
 		.sta = {
@@ -94,14 +92,14 @@ void wifi_init_sta()
 			},
 		},
 	};
-	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-	ESP_ERROR_CHECK(esp_wifi_start() );
-
-	ESP_LOGI(TAG, "wifi_init_sta finished.");
+	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+	ESP_ERROR_CHECK(esp_wifi_start());
 
 	/* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
 	 * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
+	esp_err_t ret_value = ESP_OK;
 	EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
 		WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
 		pdFALSE,
@@ -114,39 +112,24 @@ void wifi_init_sta()
 		ESP_LOGI(TAG, "connected to ap SSID:%s password:%s", CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
 	} else if (bits & WIFI_FAIL_BIT) {
 		ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s", CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
+		ret_value = ESP_FAIL;
 	} else {
 		ESP_LOGE(TAG, "UNEXPECTED EVENT");
+		ret_value = ESP_FAIL;
 	}
 
-}
-
-
-/* Is the Enter key entered */
-int KEYBOARD_ENTER_BIT = BIT2;
-
-void keyin_task(void *pvParameters)
-{
-	//ESP_LOGI(pcTaskGetName(0), "Start");
-	uint16_t c;
-	while (1) {
-		c = fgetc(stdin);
-		if (c == 0xffff) {
-			vTaskDelay(10);
-			continue;
-		}
-		//ESP_LOGI(pcTaskGetName(0), "c=%x", c);
-		if (c == 0x0a) {
-			ESP_LOGD(pcTaskGetName(0), "Push Enter");
-			xEventGroupSetBits(xEventGroup, KEYBOARD_ENTER_BIT);
-		}
-	}
+	/* The event will not be processed after unregister */
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+	vEventGroupDelete(s_wifi_event_group);
+	return ret_value;
 }
 
 void http_client(void *pvParameters);
 
 void app_main()
 {
-	//Initialize NVS
+	// Initialize NVS
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
 		ESP_ERROR_CHECK(nvs_flash_erase());
@@ -154,18 +137,9 @@ void app_main()
 	}
 	ESP_ERROR_CHECK(ret);
 
-	ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
-	wifi_init_sta();
+	// Initialize WiFi
+	ESP_ERROR_CHECK(wifi_init_sta());
 
-	//Create EventGroup
-	xEventGroup = xEventGroupCreate();
-
-	//Check everything was created
-	configASSERT( xEventGroup );
-
-	//Start keyboard task
-	xTaskCreate(keyin_task, "KEYIN", 1024*2, NULL, 2, NULL);
-
-	//Start http client task
+	// Start http client task
 	xTaskCreate(http_client, "HTTP", 1024*8, NULL, 2, NULL);
 }

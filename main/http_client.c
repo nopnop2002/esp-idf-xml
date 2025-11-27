@@ -1,7 +1,12 @@
-/* The example of ESP-IDF
- *
- * This sample code is in the public domain.
- */
+/*
+	HTTP Client Example
+
+	This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+	Unless required by applicable law or agreed to in writing, this
+	software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+*/
 
 #include <expat.h>
 #include <stdio.h>
@@ -14,20 +19,10 @@
 #include "esp_event.h"
 #include "esp_log.h"
 
-#include "lwip/err.h"
-#include "lwip/sys.h"
-
 #include "esp_http_client.h" 
 #include "esp_tls.h" 
-#include "cJSON.h"
 
 static const char *TAG = "HTTP";
-
-//EventGroupHandle_t xEventGroup;
-extern EventGroupHandle_t xEventGroup;
-/* Is the Enter key entered */
-//const int KEYBOARD_ENTER_BIT = BIT2;
-extern int KEYBOARD_ENTER_BIT;
 
 extern const char weather_yahoo_cert_pem_start[] asm("_binary_cert_pem_start");
 extern const char weather_yahoo_cert_pem_end[]	asm("_binary_cert_pem_end");
@@ -36,7 +31,6 @@ typedef struct {
 	int		depth; // XML depth
 	char	tag[64]; // XML tag
 } user_data_t;
-
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
