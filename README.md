@@ -5,8 +5,9 @@ https://components.espressif.com/components/espressif/expat
 However, unfortunately there is no sample code for ESP-IDF.   
 This is example XML parser using Expat.   
 
-# Software requirements
-esp-idf v4.4/v5.x.   
+# Software requirements   
+ESP-IDF V5.0 or later.   
+ESP-IDF V4.4 release branch reached EOL in July 2024.   
 
 # Installation
 ```
